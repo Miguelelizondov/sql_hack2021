@@ -1,0 +1,148 @@
+<html>
+    <head>
+        <title>GPS</title>
+        <meta charset="utf-8">
+        <script
+          src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBf0X8Fe7TlYtXw6MH--TyV_X_RRF53lJ8&callback=initMap&libraries=&v=weekly"
+          defer
+        ></script>
+        <script src="https://cdn.socket.io/socket.io-3.0.0.js"></script>
+                <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+
+        <!-- jQuery library -->
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+        <!-- Latest compiled JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+        <style type="text/css">
+          /* Set the size of the div element that contains the map */
+          #map {
+            height: 700px;
+            /* The height is 400 pixels */
+            width: 80%;
+            margin: auto;
+            /* The width is the width of the web page */
+          }
+          .data > span {
+            margin-left: 5px;
+          }
+          body {
+            background: linear-gradient(45deg,rgba(20,18,19,.9) 10%,rgba(0,94,105,.9)),url(github_pattern.svg) top left/auto repeat fixed;
+            color: rgba(255, 255, 255, 0.8);
+            overflow: hidden;
+            
+          }
+          .title {
+            width: 100%;
+            text-align:center;
+            font-size: 24px;
+            color:white;
+            padding: 10px;
+          }
+          .list-container{
+            width: 80%;
+            margin: auto;
+            margin-top: 20px;
+            font-size: 20px;
+          }
+          .list-group{
+            width:45%;
+            margin-left: 2.5%;
+            margin-top: 10px;;
+            float: left;
+            clear: none;
+          }
+          .list-group li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: transparent;
+            
+          }
+          .badge{
+            background-color: black;
+            font-size: inherit;
+          }
+              
+        </style>
+        <script>
+          let map;
+          let marker;
+          // Initialize and add the map
+          function initMap() {
+            // The   of initPosition
+            const initPosition = { lat: 25.651361, lng: -100.291947 };
+            // The map, centered at initPosition
+            map = new google.maps.Map(document.getElementById("map"), {
+              zoom: 16,
+              center: initPosition,
+              mapTypeId: google.maps.MapTypeId.HYBRID
+            });
+          }
+          let dictUsers = {};
+          function updateMarkerPositions(data) {
+            const latlng = new google.maps.LatLng(data.lat, data.lng);
+            if (dictUsers[data.bike_id]){
+              dictUsers[data.bike_id].setPosition(latlng);
+            } else {
+              dictUsers[data.bike_id] = new google.maps.Marker({
+                position: latlng,
+                map: map,
+              });
+              // map.setCenter(latlng);
+            }
+          }
+        </script>
+    </head>
+    <body>
+      <div class="title">Ubicación Tiempo Real:</div>
+      <!--The div element for the map -->
+      <div id="map"></div>
+    </body>
+    <script>
+      const socket = io('http://bike-tracking-tec.herokuapp.com/');
+      // const socket = io('http://localhost:3000/');
+      let intervalReference = null;
+      let socketOpen = false;
+
+      // Handle Connect
+      socket.on("connect", () => {
+        socketOpen = true;
+        console.log("Connected");
+      });
+
+      // Receive new data.
+      socket.on("update", (data) => {
+        console.log(data);
+        updateMarkerPositions(data)
+      })
+
+      // Handle Disconnect
+      socket.on("disconnect", () => {
+        socketOpen = false;
+        console.log("Disconnected");
+      });
+
+      var options = {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+      };
+
+      function success(pos) {
+        var crd = pos.coords;
+        if (socketOpen) {
+          socket.emit("update", "default", crd.latitude, crd.longitude);
+        }
+      };
+
+      function error(err) {
+        console.warn('ERROR(' + err.code + '): ' + err.message);
+      };
+
+      // setInterval(() => {
+      //   navigator.geolocation.getCurrentPosition(success, error, options);
+      // }, 5000);
+    </script>
+</html>

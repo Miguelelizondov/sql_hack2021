@@ -28,6 +28,7 @@ const recordsRecords = {
         newRecord = {
             "id_person": newRecord["id"]
         };
+        const timeTolerance = 3 * 60;
 
         const params = ["id_person"];
         let paramsValues = [];
@@ -40,16 +41,23 @@ const recordsRecords = {
         //const SocketIo = require('../helpers/SocketIo.js').SocketIo.getInstance();
         //SocketIo.io.sockets.emit(`update`, newRecord);
 
-        params.push("registered_on");
-        paramsValues.push(`'${new Date().toISOString().slice(0, 19).replace('T', ' ')}'`);
-        const query = `INSERT INTO Records (${params.join(',')}) VALUES (${paramsValues.join(',')})`;
-        console.log(query);
-        const result = await executeQuery(query);
-        if (result.status == 1) {
-            return successReponse("Success", { "id_azure": newRecord['id_azure'] });
+        var query1 = "SELECT TIMESTAMPDIFF(SECOND , registered_on, CURRENT_TIMESTAMP( ) ) AS elapsed_time FROM Records ";
+        query1 += "WHERE id_person = '"+newRecord["id_person"]+"' ORDER BY registered_on DESC LIMIT 1;"
+        const resultquery = await executeQuery(query1);
+        if (resultquery.data[0].elapsed_time >= timeTolerance){
+            params.push("registered_on");
+            paramsValues.push(`'${new Date().toISOString().slice(0, 19).replace('T', ' ')}'`);
+            const query = `INSERT INTO Records (${params.join(',')}) VALUES (${paramsValues.join(',')})`;
+            console.log(query);
+            const result = await executeQuery(query);
+            if (result.status == 1) {
+                return successReponse("Success", { "id_azure": newRecord['id_azure'] });
+            }else{
+                return failResponse("Missing Parameters", false);
+            }
+        }else{
+            return failResponse("Time Tolerance", false)
         }
-
-        return failResponse("Missing Parameters", false);
     },
     /**
      * Function that updates a bike Gps Record.
